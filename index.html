@@ -1,0 +1,197 @@
+<html>
+    <head>
+    <title>ViaCEP Webservice</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <link rel="stylesheet" href="style.css">
+    <!-- Adicionando Javascript -->
+    
+    </head>
+
+    <body>
+    <!-- Inicio do formulario -->
+      <form method="get" action="." id="formcad">
+        <label>Nome:
+            <input name="nome" type="text" id="nome" size="60" /></label><br />
+        <label>Cep:
+        <input name="cep" type="text" id="cep" value="" size="10" maxlength="9"
+               onblur="pesquisacep(this.value);" /></label><br />
+        <label>Rua:
+        <input name="rua" type="text" id="rua" size="60" /></label><br />
+        <label>Bairro:
+        <input name="bairro" type="text" id="bairro" size="40" /></label><br />
+        <label>Cidade:
+        <input name="cidade" type="text" id="cidade" size="40" /></label><br />
+        <label>Estado:
+        <input name="uf" type="text" id="uf" size="2" /></label><br />
+        <label>Número:
+        <input name="numero" type="number" id="num" size="5" /></label><br />
+        <label>DDD:
+            <input name="ddd" type="number" id="ddd" size="2" /></label><br />
+            <label>Telefone:
+                <input name="tel" type="tel" id="tel" size="9" /></label><br />
+            <label>Complemento:
+                <input name="comp" type="text" id="comp" size="40" /></label><br />
+                <!-- <button type="button" onclick="salvarCadastro()"  value="Cadastrar novo" id="cadnovo">Salvar</button> -->
+                <input type="reset" value="Limpar">
+                <input type="button" value="Cadastrar novo" id="cadnovo">
+      </form>
+
+     
+<table id="cadastros">
+
+</table>
+    </body>
+    <script>
+    
+        function limpa_formulário_cep() {
+                //Limpa valores do formulário de cep.
+                document.getElementById('rua').value=("");
+                document.getElementById('bairro').value=("");
+                document.getElementById('cidade').value=("");
+                document.getElementById('uf').value=("");
+                document.getElementById('comp').value=("");
+        }
+    
+        function meu_callback(conteudo) {
+            if (!("erro" in conteudo)) {
+                //Atualiza os campos com os valores.
+                document.getElementById('rua').value=(conteudo.logradouro);
+                document.getElementById('bairro').value=(conteudo.bairro);
+                document.getElementById('cidade').value=(conteudo.localidade);
+                document.getElementById('uf').value=(conteudo.uf);
+                document.getElementById('comp').value=(conteudo.complemento);
+            } //end if.
+            else {
+                //CEP não Encontrado.
+                limpa_formulário_cep();
+                alert("CEP não encontrado.");
+            }
+        }
+            
+        function pesquisacep(valor) {
+    
+            //Nova variável "cep" somente com dígitos.
+            var cep = valor.replace(/\D/g, '');
+    
+            //Verifica se campo cep possui valor informado.
+            if (cep != "") {
+    
+                //Expressão regular para validar o CEP.
+                var validacep = /^[0-9]{8}$/;
+    
+                //Valida o formato do CEP.
+                if(validacep.test(cep)) {
+    
+                    //Preenche os campos com "..." enquanto consulta webservice.
+                    document.getElementById('rua').value="...";
+                    document.getElementById('bairro').value="...";
+                    document.getElementById('cidade').value="...";
+                    document.getElementById('uf').value="...";
+                    document.getElementById('comp').value="...";
+    
+                    //Cria um elemento javascript.
+                    var script = document.createElement('script');
+    
+                    //Sincroniza com o callback.
+                    script.src = 'https://viacep.com.br/ws/'+ cep + '/json/?callback=meu_callback';
+    
+                    //Insere script no documento e carrega o conteúdo.
+                    document.body.appendChild(script);
+    
+                } //end if.
+                else {
+                    //cep é inválido.
+                    limpa_formulário_cep();
+                    alert("Formato de CEP inválido.");
+                }
+            } //end if.
+            else {
+                //cep sem valor, limpa formulário.
+                limpa_formulário_cep();
+            }
+        };
+    
+        //localstorage
+    
+        let cadastros = new Array();
+    
+    function cadastraNovo(){
+        const formcad = document.getElementById("formcad");
+        const formData = new FormData(formcad);
+        //cria pares chave/valor para formObj:
+        const formObj = Object.fromEntries(formData);
+        //console.log(formObj);
+        //injeta valores do formulário no fim 
+        //do array de cadastros na RAM:
+        cadastros.push(formObj); 
+        localStorage.setItem("cadastro", JSON.stringify(cadastros));
+        formcad.reset();
+    }
+    function editaCadastro(index){ //traz cadastro para edição:
+        for (let [campo, valor] of Object.entries(cadastros[index])){
+            if (campo == "gen"){ document.getElementById(valor).checked = true; }
+            else { document.getElementById(campo).value = valor;}
+        }
+        document.getElementById("cadnovo").style = "display:none";
+        document.getElementById("atualiza").style = "display:inline";
+        document.getElementById("atualiza")
+            .addEventListener("click", function(){atualizaCadastro(index)});
+    }
+    function atualizaCadastro(index){ //salva edições feitas:
+        const formcad = document.getElementById("formcad");
+        const formData = new FormData(formcad);
+        const formObj = Object.fromEntries(formData);
+        cadastros[index] = formObj;
+        localStorage.setItem("cadastro", JSON.stringify(cadastros));
+    
+        document.getElementById("atualiza").style = "display:none";
+        document.getElementById("cadnovo").style = "display:inline";
+        formcad.reset();
+        
+        preencheTabela();
+    }
+    
+    function descadastra(index){
+        cadastros.splice(index,1); //remove cadastro indicado;
+        console.log("Removendo cadastro " + index);
+        console.log(cadastros);
+        localStorage.setItem("cadastro", JSON.stringify(cadastros));
+        preencheTabela();
+    }
+    
+    function preencheTabela(){
+        if(localStorage.hasOwnProperty("cadastro")){
+            cadastros = JSON.parse(localStorage.getItem("cadastro"));
+        }
+    
+        document.getElementById("cadastros").innerHTML = ""; 
+        let index = 0;
+        cadastros.forEach( function(cadastro){
+            document.getElementById("cadastros").innerHTML += `<tr>
+            <td>${cadastro.nome}</td>
+            <td>${cadastro.cep}</td>
+            <td>${cadastro.rua}</td>
+            <td>${cadastro.bairro}</td>
+            <td>${cadastro.cidade}</td>
+            <td>${cadastro.uf}</td>
+            <td>${cadastro.numero}</td>
+            <td>${cadastro.ddd}</td>
+            <td>${cadastro.tel}</td>
+            <td>${cadastro.comp}</td>
+            <td><button onclick="descadastra(${index})">Remover</button></td>
+            </tr>`;
+            index++;
+        })
+    }
+    document.getElementById("cadnovo").addEventListener("click",function(event){
+        event.preventDefault(); //impede evento padrão de botão de formulário;
+        cadastraNovo();         //coleta dados do formulário e leva ao array e localStorage;
+        preencheTabela();       //redesenha a tabela de cadastros existentes;
+    })
+    window.onload = function(){
+        preencheTabela();
+    }
+        </script>
+
+    </html>
+    
